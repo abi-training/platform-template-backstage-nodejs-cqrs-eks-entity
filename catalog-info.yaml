@@ -1,0 +1,11 @@
+# Kind filters for ingestion live in Backstage app-config catalog.rules, not on Location entities (spec.rules is ignored).
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: nodejs-cqrs-eks-template-location
+  description: Location for Node.js CQRS EKS Backstage template (abi-training mirror)
+  annotations:
+    github.com/project-slug: abi-training/platform-template-backstage-nodejs-cqrs-eks-entity
+spec:
+  type: url
+  target: https://github.com/abi-training/platform-template-backstage-nodejs-cqrs-eks-entity/blob/main/nodejs-cqrs-eks-template.yaml

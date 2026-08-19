@@ -1,0 +1,492 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: nodejs-cqrs-eks-template
+  title: Node.js CQRS API on EKS
+  description: >
+    Create an API-first Node.js EKS service ({name}-app) with optional CQRS writer/reader workloads,
+    a message-driven worker, Crossplane infra under infra/, and Helm charts in the team GitOps chart platform repository.
+  links:
+    - url: https://github.com/orgs/abi-training/repositories?q=chart-platform&type=&language=&sort=
+      title: GitHub — team GitOps chart platform repositories (mirror)
+      icon: github
+    - url: https://github.com/abi-training/template-backstage-eks-nodejs-cqrs-app
+      title: Node.js CQRS application template source (mirror)
+      icon: github
+  tags:
+    - eks
+    - kubernetes
+    - nodejs
+    - typescript
+    - nestjs
+    - cqrs
+    - microservice
+    - aws
+    - golden-pipeline
+    - crossplane
+    - gitops
+    - helm
+    - argocd
+spec:
+  owner: group:foundations/platform-engineering
+  type: service
+
+  parameters:
+    - title: Project Info
+      required:
+        - name
+        - description
+        - costCenter
+        - costEnv
+      properties:
+        name:
+          type: string
+          title: Project Name
+          description: >
+            Repository key (max 25 characters). One GitHub repository is created — {name}-app — with
+            application sources at the repo root and Crossplane / platform infra assets under infra/.
+          maxLength: 25
+          minLength: 3
+          pattern: "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
+          ui:autofocus: true
+          ui:help: "Max 25 characters. Lowercase letters, numbers, hyphens only. Do not add an '-app' suffix."
+
+        description:
+          title: Description
+          type: string
+          description: Brief description of the service
+          default: "Node.js CQRS API for EKS"
+
+        costCenter:
+          title: Cost Center
+          type: string
+          description: Financial cost center used for cloud allocation
+          default: platform
+
+        costEnv:
+          title: Cost Environment
+          type: string
+          enum: [dev, sit, prod]
+          default: dev
+
+        costShared:
+          title: Shared Cost
+          type: boolean
+          description: Set true when this workload uses shared platform resources
+          default: false
+
+    - title: Team and GitOps
+      required:
+        - owner
+        - environments
+        - gitopsChartRepo
+        - gitopsOrganization
+        - appOrganization
+      properties:
+        owner:
+          title: Owner
+          type: string
+          description: Owning squad
+          ui:field: SquadOwnerPicker
+          ui:options:
+            catalogFilter:
+              kind: Group
+            sort: alphabetical
+            teamPathsOnly: true
+
+        environments:
+          title: Target deployment track
+          type: string
+          description: >
+            SIT integration vs optional PR ephemeral workloads. Chart values live under .../dev in the platform repo.
+          enum: ['sit', 'sit-ephemeral']
+          enumNames: ['SIT Only', 'SIT + Ephemeral']
+          default: 'sit'
+
+        gitopsChartRepo:
+          title: GitOps Helm chart repository
+          type: string
+          ui:field: GitOpsChartRepoPicker
+          ui:readonly: true
+          description: GitOps chart platform selected automatically from the owner
+          default: performance-consumer-chart-platform
+
+        gitopsBranch:
+          title: GitOps target branch
+          type: string
+          default: "main"
+          pattern: "^[a-z0-9][a-z0-9._/-]*$"
+
+        gitopsOrganization:
+          title: GitOps organization
+          type: string
+          enum:
+            - abi-training
+            - ab-inbev-ze-company
+          default: abi-training
+          ui:widget: radio
+          description: Use abi-training for SIT mirror validation. Select ab-inbev-ze-company only for production rollout.
+
+        appOrganization:
+          title: Application repository organization
+          type: string
+          enum:
+            - abi-training
+            - ab-inbev-ze-company
+          default: abi-training
+          ui:widget: radio
+          description: GitHub organization where the generated {name}-app repository is created.
+
+    - title: CQRS architecture
+      required:
+        - cqrsArchitecture
+      properties:
+        cqrsArchitecture:
+          title: Runtime architecture
+          type: string
+          enum: [standard, cqrs]
+          enumNames:
+            - Standard API (monolith + message worker)
+            - CQRS (separate writer and reader HTTP workloads)
+          default: standard
+          ui:widget: radio
+        cqrsProjectionMode:
+          title: CQRS projection mode
+          type: string
+          enum: [sync, async]
+          enumNames:
+            - Synchronous projection (in-process)
+            - Asynchronous projection (SNS/SQS + message worker)
+          default: sync
+          ui:help: Applies when CQRS architecture is selected. Async provisions messaging resources and scales the message worker.
+
+    - title: AWS Configuration
+      required:
+        - awsAccountId
+        - awsRegion
+        - eksOidcProviderId
+      properties:
+        awsAccountId:
+          title: AWS Account ID
+          type: string
+          default: "554479149941"
+          ui:readonly: true
+        awsRegion:
+          title: AWS Region
+          type: string
+          default: "us-west-2"
+          ui:readonly: true
+        eksOidcProviderId:
+          title: EKS OIDC Provider ID
+          type: string
+          pattern: "^[A-Z0-9]{32}$"
+          default: CFA3B3060A916F62CB2F522C84B48422
+          ui:readonly: true
+
+    - title: Kubernetes Configuration
+      properties:
+        namespace:
+          title: Kubernetes Namespace
+          type: string
+          pattern: "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+          default: ${{ parameters.name }}
+          ui:widget: ReadonlyNamespaceField
+          ui:readonly: true
+        replicaCount:
+          title: Initial Replicas
+          type: number
+          default: 2
+          minimum: 1
+          maximum: 10
+        cpuRequests:
+          title: CPU Requests
+          type: string
+          default: "256m"
+        cpuLimits:
+          title: CPU Limits
+          type: string
+          default: "512m"
+        memoryRequests:
+          title: Memory Requests
+          type: string
+          default: "384Mi"
+        memoryLimits:
+          title: Memory Limits
+          type: string
+          default: "576Mi"
+
+    - title: Data Storage (Optional)
+      description: Choose at most one data store. Aurora and DynamoDB create AWS resources and may incur costs.
+      properties:
+        dataStorage:
+          title: Data storage type
+          type: string
+          enum: [none, aurora-minimal, aurora-standard, dynamodb]
+          enumNames:
+            - No database
+            - Aurora PostgreSQL Serverless v2 — Minimal (0–1 ACU)
+            - Aurora PostgreSQL Serverless v2 — Standard (0–2 ACU)
+            - DynamoDB — On-demand
+          default: none
+          ui:widget: radio
+
+    - title: Autoscaling Configuration
+      properties:
+        autoscalingEnabled:
+          title: Enable Autoscaling
+          type: boolean
+          default: true
+        autoscalingMinReplicas:
+          title: Min Replicas
+          type: number
+          default: 2
+          minimum: 1
+          maximum: 10
+        autoscalingMaxReplicas:
+          title: Max Replicas
+          type: number
+          default: 4
+          minimum: 2
+          maximum: 20
+        autoscalingTargetCPU:
+          title: Target CPU Utilization (%)
+          type: number
+          default: 60
+          minimum: 10
+          maximum: 90
+
+    - title: Networking Configuration
+      properties:
+        hostnames:
+          title: Hostnames
+          type: array
+          items:
+            type: string
+          default: []
+        gatewayName:
+          title: Gateway Name
+          type: string
+          default: "consumer-gateway-private"
+          ui:readonly: true
+        gatewayNamespace:
+          title: Gateway Namespace
+          type: string
+          default: "istio-gateway"
+          ui:readonly: true
+
+    - title: Health Check Configuration
+      properties:
+        healthCheckPath:
+          title: Health Check Path
+          type: string
+          default: "/health"
+        healthCheckInitialDelay:
+          title: Initial Delay (seconds)
+          type: number
+          default: 20
+        healthCheckTimeout:
+          title: Timeout (seconds)
+          type: number
+          default: 10
+        healthCheckFailureThreshold:
+          title: Failure Threshold
+          type: number
+          default: 4
+
+    - title: Ephemeral Environment (Optional)
+      properties:
+        ephemeralEnabled:
+          title: Enable Ephemeral Environments
+          type: boolean
+          default: false
+        ephemeralIngressHost:
+          title: Ephemeral Ingress Host
+          type: string
+          default: ""
+        ephemeralInternalHost:
+          title: Ephemeral Internal Host
+          type: string
+          default: ""
+
+  steps:
+    - id: fetch-app-content
+      name: Fetch Node.js CQRS application content
+      action: fetch:template
+      input:
+        url: https://github.com/${{ parameters.appOrganization }}/template-backstage-eks-nodejs-cqrs-app.git
+        targetPath: ./repo-temp
+        values:
+          name: ${{ parameters.name }}
+          owner: ${{ parameters.owner }}
+          squad: ${{ parameters.owner }}
+          description: ${{ parameters.description }}
+          appOrganization: ${{ parameters.appOrganization }}
+          awsAccountId: ${{ parameters.awsAccountId }}
+          awsRegion: ${{ parameters.awsRegion }}
+          eksOidcProviderId: ${{ parameters.eksOidcProviderId }}
+          nodeVersion: "24"
+          applicationPort: 3000
+          releaseAwsAccountId: ${{ parameters.awsAccountId }}
+          prodAwsAccountId: ${{ parameters.awsAccountId }}
+          releaseBranch: "develop"
+          prodBranch: "main"
+          namespace: ${{ parameters.namespace or parameters.name }}
+          replicaCount: ${{ parameters.replicaCount }}
+          cpuRequests: ${{ parameters.cpuRequests }}
+          cpuLimits: ${{ parameters.cpuLimits }}
+          memoryRequests: ${{ parameters.memoryRequests }}
+          memoryLimits: ${{ parameters.memoryLimits }}
+          autoscalingEnabled: ${{ parameters.autoscalingEnabled }}
+          autoscalingMinReplicas: ${{ parameters.autoscalingMinReplicas }}
+          autoscalingMaxReplicas: ${{ parameters.autoscalingMaxReplicas }}
+          autoscalingTargetCPU: ${{ parameters.autoscalingTargetCPU }}
+          gitopsRepo: https://github.com/${{ parameters.gitopsOrganization }}/${{ parameters.gitopsChartRepo }}
+          gitopsAppPath: ${{ 'applications/' + parameters.name }}
+          gitopsBranch: ${{ parameters.gitopsBranch }}
+          goldenLibraryOrganization: ${{ parameters.gitopsOrganization }}
+          hostnames: ${{ parameters.hostnames }}
+          gatewayName: ${{ parameters.gatewayName }}
+          gatewayNamespace: ${{ parameters.gatewayNamespace }}
+          healthCheckPath: ${{ parameters.healthCheckPath }}
+          healthCheckInitialDelay: ${{ parameters.healthCheckInitialDelay }}
+          healthCheckTimeout: ${{ parameters.healthCheckTimeout }}
+          healthCheckFailureThreshold: ${{ parameters.healthCheckFailureThreshold }}
+          businessStructure: ze-delivery
+          valueStream: ${{ parameters.owner }}
+          costAppId: ${{ parameters.name }}
+          costAppName: ${{ parameters.name }}
+          costOwner: ${{ parameters.owner }}
+          costSquad: ${{ parameters.owner }}
+          costEnv: ${{ parameters.costEnv }}
+          costTemplate: platform
+          costCenter: ${{ parameters.costCenter }}
+          costShared: ${{ parameters.costShared and 'true' or 'false' }}
+          ephemeralEnabled: ${{ parameters.ephemeralEnabled }}
+          ephemeralIngressHost: ${{ parameters.ephemeralIngressHost }}
+          ephemeralInternalHost: ${{ parameters.ephemeralInternalHost }}
+          environments: ${{ parameters.environments }}
+          cqrsArchitecture: ${{ parameters.cqrsArchitecture }}
+          cqrsProjectionMode: ${{ parameters.cqrsProjectionMode }}
+          cqrsEnabled: ${{ parameters.cqrsArchitecture == 'cqrs' }}
+
+    - id: write-crossplane-infra
+      name: Write Crossplane infra manifests
+      dependsOn: [fetch-app-content]
+      action: custom:write-eks-crossplane-infra
+      input:
+        name: ${{ parameters.name }}
+        owner: ${{ parameters.owner }}
+        awsAccountId: ${{ parameters.awsAccountId }}
+        awsRegion: ${{ parameters.awsRegion }}
+        namespace: ${{ parameters.namespace or parameters.name }}
+        targetPath: repo-temp/infra
+
+    - id: publish-app
+      name: Publish monorepo (application + infra/)
+      dependsOn: [fetch-app-content, write-crossplane-infra]
+      action: custom:publish-github-api
+      input:
+        description: ${{ parameters.description }}
+        repoUrl: github.com?owner=${{ parameters.appOrganization }}&repo=${{ parameters.name }}-app
+        repoVisibility: private
+        defaultBranch: main
+        gitCommitMessage: 'Initial commit: Node.js CQRS EKS monorepo (app + Crossplane infra/, Golden Pipeline)'
+        sourcePath: ./repo-temp
+
+    - id: add-repo-creator-admin
+      name: Grant repository admin to creator (GitHub user)
+      dependsOn: [publish-app]
+      action: custom:add-repo-collaborator-admin
+      input:
+        repoUrl: ${{ steps['publish-app'].output.remoteUrl }}
+        permission: admin
+        githubUsername: ${{ user.entity.metadata.annotations['github.com/user-login'] }}
+
+    - id: register-entity-provider-catalog
+      name: Register app in entity provider catalog (main)
+      dependsOn: [publish-app, add-repo-creator-admin]
+      action: custom:register-entity-provider-catalog
+      input:
+        remoteUrl: ${{ steps['publish-app'].output.remoteUrl }}
+        defaultBranch: main
+
+    - id: create-helm-charts
+      name: Create Helm charts (workspace staging for GitOps commit)
+      dependsOn: [publish-app]
+      action: custom:create-helm-charts
+      input:
+        name: ${{ parameters.name }}
+        awsAccountId: ${{ parameters.awsAccountId }}
+        awsRegion: ${{ parameters.awsRegion }}
+        eksOidcProviderId: ${{ parameters.eksOidcProviderId }}
+        applicationPort: 3000
+        replicaCount: ${{ parameters.replicaCount }}
+        cpuRequests: ${{ parameters.cpuRequests }}
+        cpuLimits: ${{ parameters.cpuLimits }}
+        memoryRequests: ${{ parameters.memoryRequests }}
+        memoryLimits: ${{ parameters.memoryLimits }}
+        autoscalingEnabled: ${{ parameters.autoscalingEnabled }}
+        autoscalingMinReplicas: ${{ parameters.autoscalingMinReplicas }}
+        autoscalingMaxReplicas: ${{ parameters.autoscalingMaxReplicas }}
+        autoscalingTargetCPU: ${{ parameters.autoscalingTargetCPU }}
+        healthCheckPath: ${{ parameters.healthCheckPath }}
+        healthCheckInitialDelay: ${{ parameters.healthCheckInitialDelay }}
+        healthCheckTimeout: ${{ parameters.healthCheckTimeout }}
+        healthCheckFailureThreshold: ${{ parameters.healthCheckFailureThreshold }}
+        hostnames: ${{ parameters.hostnames }}
+        gatewayName: ${{ parameters.gatewayName }}
+        gatewayNamespace: ${{ parameters.gatewayNamespace }}
+        owner: ${{ parameters.owner }}
+        costAppId: ${{ parameters.name }}
+        costAppName: ${{ parameters.name }}
+        costOwner: ${{ parameters.owner }}
+        costSquad: ${{ parameters.owner }}
+        costEnv: ${{ parameters.costEnv }}
+        costTemplate: platform
+        costCenter: ${{ parameters.costCenter }}
+        costShared: ${{ parameters.costShared and 'true' or 'false' }}
+        gitOpsApplicationsParentFolder: ""
+        enableDatabase: ${{ parameters.dataStorage == 'aurora-minimal' or parameters.dataStorage == 'aurora-standard' }}
+        enableDynamodb: ${{ parameters.dataStorage == 'dynamodb' }}
+        databaseName: applicationdb
+        auroraMinCapacity: 0
+        auroraMaxCapacity: ${{ parameters.dataStorage == 'aurora-standard' and 2 or 1 }}
+        crossplaneDeletionPolicy: Orphan
+
+    - id: publish-gitops-helm
+      name: Publish platform GitOps Helm charts (main)
+      dependsOn: [create-helm-charts]
+      action: custom:publish-github-api
+      input:
+        repoUrl: github.com?owner=${{ parameters.gitopsOrganization }}&repo=${{ parameters.gitopsChartRepo }}
+        defaultBranch: ${{ parameters.gitopsBranch }}
+        sourcePath: ./helm-temp
+        gitCommitMessage: 'chore(gitops): add ${{ parameters.name }} Helm chart'
+
+    - id: debug-summary
+      name: Summary
+      dependsOn: [publish-gitops-helm, register-entity-provider-catalog]
+      action: debug:log
+      input:
+        message: |
+          Node.js CQRS EKS scaffold complete (single monorepo).
+
+          Repository: ${{ parameters.name }}-app
+          Published: ${{ steps['publish-app'].output.remoteUrl }}
+          Architecture: ${{ parameters.cqrsArchitecture }} (projection: ${{ parameters.cqrsProjectionMode }})
+          Namespace: ${{ parameters.namespace or parameters.name }}
+          Platform GitOps repo: https://github.com/${{ parameters.gitopsOrganization }}/${{ parameters.gitopsChartRepo }}
+          Helm charts: https://github.com/${{ parameters.gitopsOrganization }}/${{ parameters.gitopsChartRepo }}/tree/${{ parameters.gitopsBranch }}/applications/${{ parameters.name }}/dev
+          Entity provider catalog: ${{ steps['register-entity-provider-catalog'].output.catalogRegistrationUrl }}
+
+  output:
+    links:
+      - title: Repository (app + infra/)
+        url: ${{ steps['publish-app'].output.remoteUrl }}
+        icon: code
+      - title: Entity provider catalog (ze-idp-backstage-entity-provider)
+        url: ${{ steps['register-entity-provider-catalog'].output.catalogRegistrationUrl }}
+        icon: catalog
+      - title: Platform GitOps charts (Helm)
+        url: https://github.com/${{ parameters.gitopsOrganization }}/${{ parameters.gitopsChartRepo }}/tree/${{ parameters.gitopsBranch }}/applications/${{ parameters.name }}/dev
+        icon: storage
