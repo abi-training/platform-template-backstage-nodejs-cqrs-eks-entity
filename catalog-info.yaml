@@ -1,4 +1,10 @@
 # Kind filters for ingestion live in Backstage app-config catalog.rules, not on Location entities (spec.rules is ignored).
+#
+# Tech debt (template entity repos):
+# - Remove ownership.yml / ownership.yaml from all Backstage template entity repositories;
+#   catalog-info.yaml (this file) is the only source of truth for Location registration.
+# - abi-training org secrets GH_TOKEN_GLOBAL_JT and GH_TOKEN_DS_GELADA: replace personal PAT
+#   with a dedicated machine-user PAT (parity with ab-inbev-ze-company) before production rollout.
 apiVersion: backstage.io/v1alpha1
 kind: Location
 metadata:

@@ -1,7 +1,4 @@
+# DEPRECATED — tracked for removal (see catalog-info.yaml tech-debt notes).
 # Ownership configuration for nodejs-cqrs-eks-template
-#
-# Tech debt (abi-training mirror): org secrets GH_TOKEN_GLOBAL_JT and GH_TOKEN_DS_GELADA
-# still use a personal PAT for pipeline validation. Replace with a dedicated machine-user
-# PAT aligned with ab-inbev-ze-company before production mirror rollout.
 businessStructure: ze-delivery
 valueStream: Zé Delivery - Foundations-Platform Team
