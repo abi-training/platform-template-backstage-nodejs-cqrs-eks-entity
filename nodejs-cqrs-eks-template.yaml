@@ -321,7 +321,7 @@ spec:
           gitopsRepo: https://github.com/ab-inbev-ze-company/${{ parameters.gitopsChartRepo }}
           gitopsAppPath: ${{ 'applications/' + parameters.name }}
           gitopsBranch: ${{ parameters.gitopsBranch }}
-          goldenLibraryOrganization: ab-inbev-ze-company
+          goldenLibraryOrganization: abi-training
           hostnames: ${{ parameters.hostnames }}
           gatewayName: ${{ parameters.gatewayName }}
           gatewayNamespace: ${{ parameters.gatewayNamespace }}
