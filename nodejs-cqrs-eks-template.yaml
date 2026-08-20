@@ -1,7 +1,7 @@
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
-  name: nodejs-cqrs-eks-template
+  name: cqrs-eks-template
   title: Design pattern CQRS on EKS
   description: >
     Create an API-first Node.js EKS service ({name}-app) with optional CQRS writer/reader workloads,
