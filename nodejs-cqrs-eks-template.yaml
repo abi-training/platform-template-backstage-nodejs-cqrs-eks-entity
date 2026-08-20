@@ -2,7 +2,7 @@ apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
   name: nodejs-cqrs-eks-template
-  title: Node.js CQRS API on EKS
+  title: Design pattern CQRS on EKS
   description: >
     Create an API-first Node.js EKS service ({name}-app) with optional CQRS writer/reader workloads,
     a message-driven worker, Crossplane infra under infra/, and Helm charts in the team GitOps chart platform repository.
@@ -80,8 +80,6 @@ spec:
         - owner
         - environments
         - gitopsChartRepo
-        - gitopsOrganization
-        - appOrganization
       properties:
         owner:
           title: Owner
@@ -116,26 +114,6 @@ spec:
           type: string
           default: "main"
           pattern: "^[a-z0-9][a-z0-9._/-]*$"
-
-        gitopsOrganization:
-          title: GitOps organization
-          type: string
-          enum:
-            - abi-training
-            - ab-inbev-ze-company
-          default: abi-training
-          ui:widget: radio
-          description: Use abi-training for SIT mirror validation. Select ab-inbev-ze-company only for production rollout.
-
-        appOrganization:
-          title: Application repository organization
-          type: string
-          enum:
-            - abi-training
-            - ab-inbev-ze-company
-          default: abi-training
-          ui:widget: radio
-          description: GitHub organization where the generated {name}-app repository is created.
 
     - title: CQRS architecture
       required:
@@ -313,14 +291,14 @@ spec:
       name: Fetch Node.js CQRS application content
       action: fetch:template
       input:
-        url: https://github.com/${{ parameters.appOrganization }}/template-backstage-eks-nodejs-cqrs-app.git
+        url: https://github.com/ab-inbev-ze-company/template-backstage-eks-nodejs-cqrs-app.git
         targetPath: ./repo-temp
         values:
           name: ${{ parameters.name }}
           owner: ${{ parameters.owner }}
           squad: ${{ parameters.owner }}
           description: ${{ parameters.description }}
-          appOrganization: ${{ parameters.appOrganization }}
+          appOrganization: ab-inbev-ze-company
           awsAccountId: ${{ parameters.awsAccountId }}
           awsRegion: ${{ parameters.awsRegion }}
           eksOidcProviderId: ${{ parameters.eksOidcProviderId }}
@@ -340,10 +318,10 @@ spec:
           autoscalingMinReplicas: ${{ parameters.autoscalingMinReplicas }}
           autoscalingMaxReplicas: ${{ parameters.autoscalingMaxReplicas }}
           autoscalingTargetCPU: ${{ parameters.autoscalingTargetCPU }}
-          gitopsRepo: https://github.com/${{ parameters.gitopsOrganization }}/${{ parameters.gitopsChartRepo }}
+          gitopsRepo: https://github.com/ab-inbev-ze-company/${{ parameters.gitopsChartRepo }}
           gitopsAppPath: ${{ 'applications/' + parameters.name }}
           gitopsBranch: ${{ parameters.gitopsBranch }}
-          goldenLibraryOrganization: ${{ parameters.gitopsOrganization }}
+          goldenLibraryOrganization: ab-inbev-ze-company
           hostnames: ${{ parameters.hostnames }}
           gatewayName: ${{ parameters.gatewayName }}
           gatewayNamespace: ${{ parameters.gatewayNamespace }}
@@ -387,7 +365,7 @@ spec:
       action: custom:publish-github-api
       input:
         description: ${{ parameters.description }}
-        repoUrl: github.com?owner=${{ parameters.appOrganization }}&repo=${{ parameters.name }}-app
+        repoUrl: github.com?owner=ab-inbev-ze-company&repo=${{ parameters.name }}-app
         repoVisibility: private
         defaultBranch: main
         gitCommitMessage: 'Initial commit: Node.js CQRS EKS monorepo (app + Crossplane infra/, Golden Pipeline)'
@@ -458,7 +436,7 @@ spec:
       dependsOn: [create-helm-charts]
       action: custom:publish-github-api
       input:
-        repoUrl: github.com?owner=${{ parameters.gitopsOrganization }}&repo=${{ parameters.gitopsChartRepo }}
+        repoUrl: github.com?owner=ab-inbev-ze-company&repo=${{ parameters.gitopsChartRepo }}
         defaultBranch: ${{ parameters.gitopsBranch }}
         sourcePath: ./helm-temp
         gitCommitMessage: 'chore(gitops): add ${{ parameters.name }} Helm chart'
@@ -475,18 +453,28 @@ spec:
           Published: ${{ steps['publish-app'].output.remoteUrl }}
           Architecture: ${{ parameters.cqrsArchitecture }} (projection: ${{ parameters.cqrsProjectionMode }})
           Namespace: ${{ parameters.namespace or parameters.name }}
-          Platform GitOps repo: https://github.com/${{ parameters.gitopsOrganization }}/${{ parameters.gitopsChartRepo }}
-          Helm charts: https://github.com/${{ parameters.gitopsOrganization }}/${{ parameters.gitopsChartRepo }}/tree/${{ parameters.gitopsBranch }}/applications/${{ parameters.name }}/dev
+          Platform GitOps repo: https://github.com/ab-inbev-ze-company/${{ parameters.gitopsChartRepo }}
+          Helm charts: https://github.com/ab-inbev-ze-company/${{ parameters.gitopsChartRepo }}/tree/${{ parameters.gitopsBranch }}/applications/${{ parameters.name }}/dev
+          Argo CD application: https://argo.zedelivery.in/applications/eks-consumer-dev-${{ parameters.name }}
           Entity provider catalog: ${{ steps['register-entity-provider-catalog'].output.catalogRegistrationUrl }}
+
+          Next: review infra/ for Crossplane claims; Argo CD will sync once the Golden Pipeline updates image tags.
+          CI: https://github.com/ab-inbev-ze-company/${{ parameters.name }}-app/actions
 
   output:
     links:
       - title: Repository (app + infra/)
         url: ${{ steps['publish-app'].output.remoteUrl }}
         icon: code
+      - title: App catalog-info.yaml
+        url: https://github.com/ab-inbev-ze-company/${{ parameters.name }}-app/blob/main/catalog-info.yaml
+        icon: docs
       - title: Entity provider catalog (ze-idp-backstage-entity-provider)
         url: ${{ steps['register-entity-provider-catalog'].output.catalogRegistrationUrl }}
         icon: catalog
       - title: Platform GitOps charts (Helm)
-        url: https://github.com/${{ parameters.gitopsOrganization }}/${{ parameters.gitopsChartRepo }}/tree/${{ parameters.gitopsBranch }}/applications/${{ parameters.name }}/dev
+        url: https://github.com/ab-inbev-ze-company/${{ parameters.gitopsChartRepo }}/tree/${{ parameters.gitopsBranch }}/applications/${{ parameters.name }}/dev
         icon: storage
+      - title: Argo CD application
+        url: https://argo.zedelivery.in/applications/eks-consumer-dev-${{ parameters.name }}
+        icon: dashboard
