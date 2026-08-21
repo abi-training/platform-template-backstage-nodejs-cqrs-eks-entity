@@ -5,13 +5,16 @@
 #   catalog-info.yaml (this file) is the only source of truth for Location registration.
 # - abi-training org secrets GH_TOKEN_GLOBAL_JT and GH_TOKEN_DS_GELADA: replace personal PAT
 #   with a dedicated machine-user PAT (parity with ab-inbev-ze-company) before production rollout.
+# - AWS IAM role dtc-aws-gha-role (account 554479149941): extend GitHub OIDC trust policy to
+#   abi-training (or repo:abi-training/* scaffold apps) so Golden Pipeline GitOps jobs on mirror
+#   repos can AssumeRoleWithWebIdentity, push to ECR, and update chart image.tag.
 apiVersion: backstage.io/v1alpha1
 kind: Location
 metadata:
   name: nodejs-cqrs-eks-template-location
-  description: Location for Node.js CQRS EKS Backstage template (abi-training mirror)
+  description: Location for Node.js CQRS EKS Backstage template
   annotations:
-    github.com/project-slug: abi-training/platform-template-backstage-nodejs-cqrs-eks-entity
+    github.com/project-slug: ab-inbev-ze-company/platform-template-backstage-nodejs-cqrs-eks-entity
 spec:
   type: url
-  target: https://github.com/abi-training/platform-template-backstage-nodejs-cqrs-eks-entity/blob/main/nodejs-cqrs-eks-template.yaml
+  target: https://github.com/ab-inbev-ze-company/platform-template-backstage-nodejs-cqrs-eks-entity/blob/main/nodejs-cqrs-eks-template.yaml

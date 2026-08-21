@@ -7,11 +7,11 @@ metadata:
     Create an API-first Node.js EKS service ({name}-app) with optional CQRS writer/reader workloads,
     a message-driven worker, Crossplane infra under infra/, and Helm charts in the team GitOps chart platform repository.
   links:
-    - url: https://github.com/orgs/abi-training/repositories?q=chart-platform&type=&language=&sort=
-      title: GitHub — team GitOps chart platform repositories (mirror)
+    - url: https://github.com/orgs/ab-inbev-ze-company/repositories?q=chart-platform&type=&language=&sort=
+      title: GitHub — team GitOps chart platform repositories
       icon: github
-    - url: https://github.com/abi-training/template-backstage-eks-nodejs-cqrs-app
-      title: Node.js CQRS application template source (mirror)
+    - url: https://github.com/ab-inbev-ze-company/template-backstage-eks-nodejs-cqrs-app
+      title: Node.js CQRS application template source
       icon: github
   tags:
     - eks
@@ -321,7 +321,7 @@ spec:
           gitopsRepo: https://github.com/ab-inbev-ze-company/${{ parameters.gitopsChartRepo }}
           gitopsAppPath: ${{ 'applications/' + parameters.name }}
           gitopsBranch: ${{ parameters.gitopsBranch }}
-          goldenLibraryOrganization: abi-training
+          goldenLibraryOrganization: ab-inbev-ze-company
           hostnames: ${{ parameters.hostnames }}
           gatewayName: ${{ parameters.gatewayName }}
           gatewayNamespace: ${{ parameters.gatewayNamespace }}
