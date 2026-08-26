@@ -3,9 +3,8 @@
 # Tech debt (template entity repos):
 # - abi-training org secrets GH_TOKEN_GLOBAL_JT and GH_TOKEN_DS_GELADA: replace personal PAT
 #   with a dedicated machine-user PAT (parity with ab-inbev-ze-company) before production rollout.
-# - AWS IAM role dtc-aws-gha-role (account 554479149941): extend GitHub OIDC trust policy to
-#   abi-training (or repo:abi-training/* scaffold apps) so Golden Pipeline GitOps jobs on mirror
-#   repos can AssumeRoleWithWebIdentity, push to ECR, and update chart image.tag.
+# - AWS IAM role dtc-aws-gha-role (account 554479149941): add repo:abi-training/*:* to the
+#   GitHub OIDC trust policy StringLike on token.actions.githubusercontent.com:sub (infra IAM).
 apiVersion: backstage.io/v1alpha1
 kind: Location
 metadata:
