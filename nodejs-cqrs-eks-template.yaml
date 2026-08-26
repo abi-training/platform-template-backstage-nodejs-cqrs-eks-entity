@@ -357,6 +357,8 @@ spec:
         awsAccountId: ${{ parameters.awsAccountId }}
         awsRegion: ${{ parameters.awsRegion }}
         namespace: ${{ parameters.namespace or parameters.name }}
+        eksOidcProviderId: ${{ parameters.eksOidcProviderId }}
+        deletionPolicy: Orphan
         targetPath: repo-temp/infra
 
     - id: publish-app
