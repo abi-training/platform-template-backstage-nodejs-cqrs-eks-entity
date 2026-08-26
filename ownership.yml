@@ -1,4 +1,0 @@
-# DEPRECATED — tracked for removal (see catalog-info.yaml tech-debt notes).
-# Ownership configuration for nodejs-cqrs-eks-template
-businessStructure: ze-delivery
-valueStream: Zé Delivery - Foundations-Platform Team
