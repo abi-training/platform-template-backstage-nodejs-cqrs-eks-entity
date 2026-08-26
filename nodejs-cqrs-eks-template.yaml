@@ -241,6 +241,9 @@ spec:
           items:
             type: string
           default: []
+          ui:help: >-
+            Optional public hostnames for the HTTPRoute (for example my-service.dev.zedelivery.in).
+            Leave empty to scaffold without external routing; add hostnames later in GitOps values.yaml.
         gatewayName:
           title: Gateway Name
           type: string
