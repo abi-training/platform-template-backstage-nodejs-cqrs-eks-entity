@@ -115,7 +115,7 @@ spec:
           default: "main"
           pattern: "^[a-z0-9][a-z0-9._/-]*$"
 
-    - title: CQRS architecture
+    - title: Runtime architecture
       required:
         - cqrsArchitecture
       properties:
@@ -124,19 +124,43 @@ spec:
           type: string
           enum: [standard, cqrs]
           enumNames:
-            - Standard API (monolith + message worker)
+            - Standard API (monolith)
             - CQRS (separate writer and reader HTTP workloads)
           default: standard
           ui:widget: radio
-        cqrsProjectionMode:
-          title: CQRS projection mode
-          type: string
-          enum: [sync, async]
-          enumNames:
-            - Synchronous projection (in-process)
-            - Asynchronous projection (SNS/SQS + message worker)
-          default: sync
-          ui:help: Applies when CQRS architecture is selected. Async provisions messaging resources and scales the message worker.
+      dependencies:
+        cqrsArchitecture:
+          oneOf:
+            - properties:
+                cqrsArchitecture:
+                  const: standard
+                standardMessagingMode:
+                  title: Async messaging
+                  type: string
+                  enum: [api-only, with-queue-worker]
+                  enumNames:
+                    - API only (no message worker)
+                    - API + queue worker (SNS/SQS)
+                  default: api-only
+                  ui:widget: radio
+                  ui:help: Queue worker provisions SNS/SQS and a background consumer for inbound messages.
+              required:
+                - standardMessagingMode
+            - properties:
+                cqrsArchitecture:
+                  const: cqrs
+                cqrsProjectionMode:
+                  title: CQRS projection mode
+                  type: string
+                  enum: [sync, async]
+                  enumNames:
+                    - Synchronous projection (in-process)
+                    - Asynchronous projection (SNS/SQS + message worker)
+                  default: sync
+                  ui:widget: radio
+                  ui:help: Async provisions messaging resources and scales the message worker for read-model projections.
+              required:
+                - cqrsProjectionMode
 
     - title: AWS Configuration
       required:
@@ -347,7 +371,8 @@ spec:
           ephemeralInternalHost: ${{ parameters.ephemeralInternalHost }}
           environments: ${{ parameters.environments }}
           cqrsArchitecture: ${{ parameters.cqrsArchitecture }}
-          cqrsProjectionMode: ${{ parameters.cqrsProjectionMode }}
+          cqrsProjectionMode: ${{ parameters.cqrsProjectionMode or 'sync' }}
+          standardMessagingMode: ${{ parameters.standardMessagingMode or 'api-only' }}
           cqrsEnabled: ${{ parameters.cqrsArchitecture == 'cqrs' }}
 
     - id: write-crossplane-infra
@@ -363,7 +388,8 @@ spec:
         eksOidcProviderId: ${{ parameters.eksOidcProviderId }}
         deletionPolicy: Orphan
         cqrsArchitecture: ${{ parameters.cqrsArchitecture }}
-        cqrsProjectionMode: ${{ parameters.cqrsProjectionMode }}
+        cqrsProjectionMode: ${{ parameters.cqrsProjectionMode or 'sync' }}
+        standardMessagingMode: ${{ parameters.standardMessagingMode or 'api-only' }}
         targetPath: repo-temp/infra
 
     - id: publish-app
@@ -438,8 +464,9 @@ spec:
         auroraMaxCapacity: ${{ parameters.dataStorage == 'aurora-standard' and 2 or 1 }}
         crossplaneDeletionPolicy: Orphan
         cqrsArchitecture: ${{ parameters.cqrsArchitecture }}
-        cqrsProjectionMode: ${{ parameters.cqrsProjectionMode }}
-        enableMessageWorker: true
+        cqrsProjectionMode: ${{ parameters.cqrsProjectionMode or 'sync' }}
+        standardMessagingMode: ${{ parameters.standardMessagingMode or 'api-only' }}
+        enableMessageWorker: ${{ (parameters.cqrsArchitecture == 'cqrs' and parameters.cqrsProjectionMode == 'async') or (parameters.cqrsArchitecture == 'standard' and parameters.standardMessagingMode == 'with-queue-worker') }}
 
     - id: publish-gitops-helm
       name: Publish platform GitOps Helm charts (main)
@@ -461,7 +488,7 @@ spec:
 
           Repository: ${{ parameters.name }}-app
           Published: ${{ steps['publish-app'].output.remoteUrl }}
-          Architecture: ${{ parameters.cqrsArchitecture }} (projection: ${{ parameters.cqrsProjectionMode }})
+          Architecture: ${{ parameters.cqrsArchitecture }} (${{ parameters.cqrsArchitecture == 'cqrs' and ('projection: ' + parameters.cqrsProjectionMode) or ('messaging: ' + parameters.standardMessagingMode) }})
           Namespace: ${{ parameters.namespace or parameters.name }}
           Platform GitOps repo: https://github.com/ab-inbev-ze-company/${{ parameters.gitopsChartRepo }}
           Helm charts: https://github.com/ab-inbev-ze-company/${{ parameters.gitopsChartRepo }}/tree/${{ parameters.gitopsBranch }}/applications/${{ parameters.name }}/dev
