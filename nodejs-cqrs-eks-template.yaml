@@ -362,6 +362,8 @@ spec:
         namespace: ${{ parameters.namespace or parameters.name }}
         eksOidcProviderId: ${{ parameters.eksOidcProviderId }}
         deletionPolicy: Orphan
+        cqrsArchitecture: ${{ parameters.cqrsArchitecture }}
+        cqrsProjectionMode: ${{ parameters.cqrsProjectionMode }}
         targetPath: repo-temp/infra
 
     - id: publish-app
@@ -435,6 +437,9 @@ spec:
         auroraMinCapacity: 0
         auroraMaxCapacity: ${{ parameters.dataStorage == 'aurora-standard' and 2 or 1 }}
         crossplaneDeletionPolicy: Orphan
+        cqrsArchitecture: ${{ parameters.cqrsArchitecture }}
+        cqrsProjectionMode: ${{ parameters.cqrsProjectionMode }}
+        enableMessageWorker: true
 
     - id: publish-gitops-helm
       name: Publish platform GitOps Helm charts (main)
