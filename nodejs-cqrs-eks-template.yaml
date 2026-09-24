@@ -478,14 +478,23 @@ spec:
         enableMessageWorker: ${{ (parameters.cqrsArchitecture == 'cqrs' and parameters.cqrsProjectionMode == 'async') or (parameters.cqrsArchitecture == 'standard' and parameters.standardMessagingMode == 'with-queue-worker') }}
 
     - id: publish-gitops-helm
-      name: Publish platform GitOps Helm charts (main)
+      name: Open platform GitOps Helm pull request
       dependsOn: [create-helm-charts]
-      action: custom:publish-github-api
+      action: publish:github:pull-request
       input:
         repoUrl: github.com?owner=ab-inbev-ze-company&repo=${{ parameters.gitopsChartRepo }}
-        defaultBranch: ${{ parameters.gitopsBranch }}
+        branchName: feature/add-${{ parameters.name }}-helm
+        title: 'Add Helm chart for ${{ parameters.name }}'
+        description: |
+          Automated PR from the Backstage Node.js CQRS EKS template.
+
+          Application repository: https://github.com/ab-inbev-ze-company/${{ parameters.name }}-app
+          Chart path: applications/${{ parameters.name }}/dev
+        targetBranchName: ${{ parameters.gitopsBranch }}
         sourcePath: ./helm-temp
-        gitCommitMessage: 'chore(gitops): add ${{ parameters.name }} Helm chart'
+        commitMessage: 'chore(gitops): add ${{ parameters.name }} Helm chart'
+        gitAuthorName: ${{ parameters.owner }}
+        gitAuthorEmail: ${{ parameters.owner }}@ab-inbev.com
 
     - id: debug-summary
       name: Summary
@@ -521,6 +530,9 @@ spec:
       - title: Entity provider catalog (ze-idp-backstage-entity-provider)
         url: ${{ steps['register-entity-provider-catalog'].output.catalogRegistrationUrl }}
         icon: catalog
+      - title: Platform GitOps Helm pull request
+        url: ${{ steps['publish-gitops-helm'].output.remoteUrl }}
+        icon: merge
       - title: Platform GitOps charts (Helm)
         url: https://github.com/ab-inbev-ze-company/${{ parameters.gitopsChartRepo }}/tree/${{ parameters.gitopsBranch }}/applications/${{ parameters.name }}/dev
         icon: storage
