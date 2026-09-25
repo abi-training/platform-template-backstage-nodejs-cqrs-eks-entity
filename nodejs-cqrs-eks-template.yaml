@@ -412,6 +412,30 @@ spec:
           **Owner:** ${{ parameters.owner }}
           **Description:** ${{ parameters.description }}
         sourcePath: ./repo-temp
+        excludePaths:
+          - .github/workflows/**
+
+    - id: merge-app-pr
+      name: Merge initial application PR into develop
+      dependsOn: [publish-app]
+      action: custom:merge-github-pull-request
+      input:
+        repoUrl: github.com?owner=ab-inbev-ze-company&repo=${{ parameters.name }}-app
+        pullRequestNumber: ${{ steps['publish-app'].output.pullRequestNumber }}
+        mergeMethod: squash
+        allowSkipWhenMergeBlocked: true
+
+    - id: publish-app-workflows
+      name: Publish Golden Pipeline workflow to develop
+      dependsOn: [merge-app-pr]
+      action: custom:publish-github-api
+      input:
+        repoUrl: github.com?owner=ab-inbev-ze-company&repo=${{ parameters.name }}-app
+        defaultBranch: develop
+        sourcePath: ./repo-temp
+        includePaths:
+          - .github/workflows/**
+        gitCommitMessage: 'chore(ci): add Golden Pipeline workflow'
 
     - id: add-repo-creator-admin
       name: Grant repository admin to creator (GitHub user)
@@ -424,7 +448,7 @@ spec:
 
     - id: register-entity-provider-catalog
       name: Register app in entity provider catalog (main)
-      dependsOn: [publish-app, add-repo-creator-admin]
+      dependsOn: [merge-app-pr, add-repo-creator-admin]
       action: custom:register-entity-provider-catalog
       input:
         remoteUrl: ${{ steps['publish-app'].output.remoteUrl }}
