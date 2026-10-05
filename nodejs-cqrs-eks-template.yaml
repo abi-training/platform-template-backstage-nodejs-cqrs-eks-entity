@@ -171,7 +171,7 @@ spec:
         awsAccountId:
           title: AWS Account ID
           type: string
-          default: "554479149941"
+          default: "713440373855"
           ui:readonly: true
         awsRegion:
           title: AWS Region
@@ -182,11 +182,16 @@ spec:
           title: EKS OIDC Provider ID
           type: string
           pattern: "^[A-Z0-9]{32}$"
-          default: CFA3B3060A916F62CB2F522C84B48422
+          default: E8163CA7DAD61398A504910DCCAFB21E
           ui:readonly: true
 
     - title: Kubernetes Configuration
       properties:
+        clusterName:
+          title: EKS Cluster Name
+          type: string
+          default: "eks-courier-dev"
+          ui:readonly: true
         namespace:
           title: Kubernetes Namespace
           type: string
@@ -271,7 +276,7 @@ spec:
         gatewayName:
           title: Gateway Name
           type: string
-          default: "consumer-gateway-private"
+          default: "courier-gateway-private"
           ui:readonly: true
         gatewayNamespace:
           title: Gateway Namespace
@@ -384,6 +389,7 @@ spec:
         owner: ${{ parameters.owner }}
         awsAccountId: ${{ parameters.awsAccountId }}
         awsRegion: ${{ parameters.awsRegion }}
+        clusterName: ${{ parameters.clusterName }}
         namespace: ${{ parameters.namespace or parameters.name }}
         eksOidcProviderId: ${{ parameters.eksOidcProviderId }}
         deletionPolicy: Orphan
@@ -461,8 +467,10 @@ spec:
       input:
         name: ${{ parameters.name }}
         awsAccountId: ${{ parameters.awsAccountId }}
+        awsAccountName: courier-dev
         awsRegion: ${{ parameters.awsRegion }}
         eksOidcProviderId: ${{ parameters.eksOidcProviderId }}
+        clusterName: ${{ parameters.clusterName }}
         applicationPort: 3000
         replicaCount: ${{ parameters.replicaCount }}
         cpuRequests: ${{ parameters.cpuRequests }}
@@ -490,6 +498,7 @@ spec:
         costCenter: ${{ parameters.costCenter }}
         costShared: ${{ parameters.costShared and 'true' or 'false' }}
         gitOpsApplicationsParentFolder: ""
+        gitopsEnvironment: courier-dev
         enableDatabase: ${{ parameters.dataStorage == 'aurora-minimal' or parameters.dataStorage == 'aurora-standard' }}
         enableDynamodb: ${{ parameters.dataStorage == 'dynamodb' }}
         databaseName: applicationdb
@@ -534,7 +543,7 @@ spec:
           Namespace: ${{ parameters.namespace or parameters.name }}
           Platform GitOps repo: https://github.com/ab-inbev-ze-company/${{ parameters.gitopsChartRepo }}
           Helm charts: https://github.com/ab-inbev-ze-company/${{ parameters.gitopsChartRepo }}/tree/${{ parameters.gitopsBranch }}/applications/${{ parameters.name }}/dev
-          Argo CD application: https://argo.zedelivery.in/applications/eks-consumer-dev-${{ parameters.name }}
+          Argo CD application: https://argo.zedelivery.in/applications/eks-courier-dev-${{ parameters.name }}
           Entity provider catalog: ${{ steps['register-entity-provider-catalog'].output.catalogRegistrationUrl }}
 
           Next: review infra/ for Crossplane claims; Argo CD will sync once the Golden Pipeline updates image tags.
@@ -561,5 +570,5 @@ spec:
         url: https://github.com/ab-inbev-ze-company/${{ parameters.gitopsChartRepo }}/tree/${{ parameters.gitopsBranch }}/applications/${{ parameters.name }}/dev
         icon: storage
       - title: Argo CD application
-        url: https://argo.zedelivery.in/applications/eks-consumer-dev-${{ parameters.name }}
+        url: https://argo.zedelivery.in/applications/eks-courier-dev-${{ parameters.name }}
         icon: dashboard
