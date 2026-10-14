@@ -504,7 +504,7 @@ spec:
     - id: publish-gitops-helm
       name: Open platform GitOps Helm pull request
       dependsOn: [create-helm-charts]
-      action: publish:github:pull-request
+      action: custom:publish-github-pull-request-api
       input:
         repoUrl: github.com?owner=ab-inbev-ze-company&repo=${{ parameters.gitopsChartRepo }}
         branchName: feature/add-${{ parameters.name }}-helm
