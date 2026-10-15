@@ -489,7 +489,7 @@ spec:
     - id: publish-gitops-helm
       name: Open platform GitOps Helm pull request
       dependsOn: [create-helm-charts]
-      action: publish:github:pull-request
+      action: custom:publish-github-pull-request-api
       input:
         repoUrl: github.com?owner=abi-training&repo=ze-courier-chart
         branchName: feature/add-${{ parameters.name }}-helm
@@ -502,8 +502,6 @@ spec:
         targetBranchName: main
         sourcePath: ./helm-temp
         commitMessage: 'chore(gitops): add ${{ parameters.name }} Helm chart'
-        gitAuthorName: ${{ parameters.owner }}
-        gitAuthorEmail: ${{ parameters.owner }}@ab-inbev.com
 
     - id: debug-summary
       name: Summary
