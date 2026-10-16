@@ -256,7 +256,7 @@ spec:
         gatewayName:
           title: Gateway Name
           type: string
-          default: "consumer-gateway-private"
+          default: "courier-gateway"
           ui:readonly: true
         gatewayNamespace:
           title: Gateway Namespace
