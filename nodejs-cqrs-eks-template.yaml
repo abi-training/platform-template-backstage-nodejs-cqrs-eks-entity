@@ -7,7 +7,7 @@ metadata:
     Create an API-first Node.js EKS service ({name}-app) with optional CQRS writer/reader workloads,
     a message-driven worker, Crossplane infra under infra/, and Helm charts in the team GitOps chart platform repository.
   links:
-    - url: https://github.com/abi-training/ze-courier-chart
+    - url: https://github.com/abi-training/ze-consumer-chart
       title: GitHub — team GitOps chart platform repositories
       icon: github
     - url: https://github.com/ab-inbev-ze-company/template-backstage-eks-nodejs-cqrs-app
@@ -256,7 +256,7 @@ spec:
         gatewayName:
           title: Gateway Name
           type: string
-          default: "courier-gateway"
+          default: "consumer-gateway-private"
           ui:readonly: true
         gatewayNamespace:
           title: Gateway Namespace
@@ -330,7 +330,7 @@ spec:
           autoscalingMinReplicas: ${{ parameters.autoscalingMinReplicas }}
           autoscalingMaxReplicas: ${{ parameters.autoscalingMaxReplicas }}
           autoscalingTargetCPU: ${{ parameters.autoscalingTargetCPU }}
-          gitopsRepo: https://github.com/abi-training/ze-courier-chart
+          gitopsRepo: https://github.com/abi-training/ze-consumer-chart
           gitopsAppPath: ${{ 'applications/' + parameters.name }}
           gitopsBranch: main
           goldenLibraryOrganization: ab-inbev-ze-company
@@ -491,7 +491,7 @@ spec:
       dependsOn: [create-helm-charts]
       action: custom:publish-github-pull-request-api
       input:
-        repoUrl: github.com?owner=abi-training&repo=ze-courier-chart
+        repoUrl: github.com?owner=abi-training&repo=ze-consumer-chart
         branchName: feature/add-${{ parameters.name }}-helm
         title: 'Add Helm chart for ${{ parameters.name }}'
         description: |
@@ -515,8 +515,8 @@ spec:
           Published: ${{ steps['publish-app'].output.remoteUrl }}
           Architecture: ${{ parameters.cqrsArchitecture }} (${{ parameters.cqrsArchitecture == 'cqrs' and ('projection: ' + parameters.cqrsProjectionMode) or ('messaging: ' + parameters.standardMessagingMode) }})
           Namespace: ${{ parameters.namespace or parameters.name }}
-          Platform GitOps repo: https://github.com/abi-training/ze-courier-chart
-          Helm charts: https://github.com/abi-training/ze-courier-chart/tree/main/applications/${{ parameters.name }}/dev
+          Platform GitOps repo: https://github.com/abi-training/ze-consumer-chart
+          Helm charts: https://github.com/abi-training/ze-consumer-chart/tree/main/applications/${{ parameters.name }}/dev
           Argo CD application: https://argo.zedelivery.in/applications/eks-consumer-dev-${{ parameters.name }}
           Entity provider catalog: ${{ steps['register-entity-provider-catalog'].output.catalogRegistrationUrl }}
 
@@ -541,7 +541,7 @@ spec:
         url: ${{ steps['publish-gitops-helm'].output.remoteUrl }}
         icon: merge
       - title: Platform GitOps charts (Helm)
-        url: https://github.com/abi-training/ze-courier-chart/tree/main/applications/${{ parameters.name }}/dev
+        url: https://github.com/abi-training/ze-consumer-chart/tree/main/applications/${{ parameters.name }}/dev
         icon: storage
       - title: Argo CD application
         url: https://argo.zedelivery.in/applications/eks-consumer-dev-${{ parameters.name }}
