@@ -4,7 +4,7 @@ metadata:
   name: cqrs-eks-template
   title: Design pattern CQRS on EKS
   description: >
-    Create an API-first Node.js EKS service ({name}-app) with optional CQRS writer/reader workloads,
+    Create an API-first Node.js EKS service (ms-{name}-app) with optional CQRS writer/reader workloads,
     a message-driven worker, Crossplane infra under infra/, and Helm charts in the team GitOps chart platform repository.
   links:
     - url: https://github.com/abi-training/ze-consumer-chart
@@ -38,6 +38,7 @@ spec:
         - description
         - costCenter
         - costEnv
+        - repositoryTeam
       properties:
         name:
           type: string
@@ -50,6 +51,12 @@ spec:
           pattern: "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
           ui:autofocus: true
           ui:help: "Max 25 characters. Lowercase letters, numbers, hyphens only. Do not add an '-app' suffix."
+
+        repositoryTeam:
+          title: Repository access team
+          type: string
+          description: Select the GitHub team that receives administration access to the generated repository.
+          ui:field: GithubOrgTeamPicker
 
         description:
           title: Description
@@ -383,7 +390,7 @@ spec:
       action: custom:publish-github-api
       input:
         description: ${{ parameters.description }}
-        repoUrl: github.com?owner=ab-inbev-ze-company&repo=${{ parameters.name }}-app
+        repoUrl: github.com?owner=ab-inbev-ze-company&repo=ms-${{ parameters.name }}-app
         repoVisibility: private
         defaultBranch: template/start
         pullRequestTargetBranch: develop
@@ -404,7 +411,7 @@ spec:
       dependsOn: [publish-app]
       action: custom:merge-github-pull-request
       input:
-        repoUrl: github.com?owner=ab-inbev-ze-company&repo=${{ parameters.name }}-app
+        repoUrl: github.com?owner=ab-inbev-ze-company&repo=ms-${{ parameters.name }}-app
         pullRequestNumber: ${{ steps['publish-app'].output.pullRequestNumber }}
         mergeMethod: squash
         allowSkipWhenMergeBlocked: true
@@ -414,25 +421,27 @@ spec:
       dependsOn: [merge-app-pr]
       action: custom:publish-github-api
       input:
-        repoUrl: github.com?owner=ab-inbev-ze-company&repo=${{ parameters.name }}-app
+        repoUrl: github.com?owner=ab-inbev-ze-company&repo=ms-${{ parameters.name }}-app
         defaultBranch: develop
         sourcePath: ./repo-temp
         includePaths:
           - .github/workflows/**
         gitCommitMessage: 'chore(ci): add Golden Pipeline workflow'
 
-    - id: add-repo-creator-admin
-      name: Grant repository admin to creator (GitHub user)
+    - id: add-repository-team
+      name: Grant repository administration to the selected team
       dependsOn: [publish-app]
-      action: custom:add-repo-collaborator-admin
+      action: custom:add-repo-teams
       input:
         repoUrl: ${{ steps['publish-app'].output.remoteUrl }}
+        teams:
+          - ${{ parameters.repositoryTeam }}
         permission: admin
-        githubUsername: ${{ user.entity.metadata.annotations['github.com/user-login'] }}
+        mandatoryTeamsPolicy: template-teams-only
 
     - id: register-entity-provider-catalog
       name: Register app in entity provider catalog (main)
-      dependsOn: [merge-app-pr, add-repo-creator-admin]
+      dependsOn: [merge-app-pr, add-repository-team]
       action: custom:register-entity-provider-catalog
       input:
         remoteUrl: ${{ steps['publish-app'].output.remoteUrl }}
@@ -496,7 +505,7 @@ spec:
         description: |
           Automated PR from the Backstage Node.js CQRS EKS template.
 
-          Application repository: https://github.com/ab-inbev-ze-company/${{ parameters.name }}-app
+          Application repository: https://github.com/abi-training/ms-${{ parameters.name }}-app
           Chart path: applications/${{ parameters.name }}/dev
         targetBranchName: main
         sourcePath: ./helm-temp
@@ -510,7 +519,7 @@ spec:
         message: |
           Node.js CQRS EKS scaffold complete (single monorepo).
 
-          Repository: ${{ parameters.name }}-app
+          Repository: ms-${{ parameters.name }}-app
           Published: ${{ steps['publish-app'].output.remoteUrl }}
           Architecture: ${{ parameters.cqrsArchitecture }} (${{ parameters.cqrsArchitecture == 'cqrs' and ('projection: ' + parameters.cqrsProjectionMode) or ('messaging: ' + parameters.standardMessagingMode) }})
           Namespace: ${{ parameters.namespace or parameters.name }}
@@ -520,7 +529,7 @@ spec:
           Entity provider catalog: ${{ steps['register-entity-provider-catalog'].output.catalogRegistrationUrl }}
 
           Next: review infra/ for Crossplane claims; Argo CD will sync once the Golden Pipeline updates image tags.
-          CI: https://github.com/ab-inbev-ze-company/${{ parameters.name }}-app/actions
+          CI: https://github.com/abi-training/ms-${{ parameters.name }}-app/actions
 
   output:
     links:
@@ -528,7 +537,7 @@ spec:
         url: ${{ steps['publish-app'].output.remoteUrl }}
         icon: code
       - title: App catalog-info.yaml
-        url: https://github.com/ab-inbev-ze-company/${{ parameters.name }}-app/blob/develop/catalog-info.yaml
+        url: https://github.com/abi-training/ms-${{ parameters.name }}-app/blob/develop/catalog-info.yaml
         icon: docs
       - title: Initial application pull request
         url: ${{ steps['publish-app'].output.pullRequestUrl }}
