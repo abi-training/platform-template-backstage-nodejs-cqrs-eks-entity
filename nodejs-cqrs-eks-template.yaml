@@ -64,6 +64,35 @@ spec:
           description: Brief description of the service
           default: "Node.js CQRS API for EKS"
 
+    - title: Business ownership
+      required:
+        - product
+        - element
+        - team
+        - tier
+      properties:
+        product:
+          title: Product
+          type: string
+          description: Business product responsible for the workload.
+          pattern: "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
+        element:
+          title: Element
+          type: string
+          description: Business element provided by the workload.
+          pattern: "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
+        team:
+          title: Team
+          type: string
+          description: Team responsible for operating the workload.
+          pattern: "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
+        tier:
+          title: Service tier
+          type: string
+          description: Select the service tier for this application.
+          enum: ['1', '2', '3', '4']
+          default: '3'
+
         costCenter:
           title: Cost Center
           type: string
@@ -331,6 +360,11 @@ spec:
           name: ${{ parameters.name }}
           owner: ${{ parameters.owner }}
           squad: ${{ parameters.owner }}
+          catalogOwner: ${{ parameters.owner }}
+          product: ${{ parameters.product }}
+          element: ${{ parameters.element }}
+          team: ${{ parameters.team }}
+          tier: ${{ parameters.tier }}
           description: ${{ parameters.description }}
           appOrganization: ab-inbev-ze-company
           awsAccountId: ${{ parameters.awsAccountId }}
