@@ -36,8 +36,6 @@ spec:
       required:
         - name
         - description
-        - costCenter
-        - costEnv
         - repositoryTeam
       properties:
         name:
@@ -70,6 +68,8 @@ spec:
         - element
         - team
         - tier
+        - costCenter
+        - costEnv
       properties:
         product:
           title: Product
