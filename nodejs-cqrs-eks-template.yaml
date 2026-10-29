@@ -86,6 +86,7 @@ spec:
       required:
         - owner
         - environments
+        - deploymentTarget
       properties:
         owner:
           title: Owner
@@ -106,6 +107,19 @@ spec:
           enum: ['sit', 'sit-ephemeral']
           enumNames: ['SIT Only', 'SIT + Ephemeral']
           default: 'sit'
+
+        deploymentTarget:
+          title: Deployment Target
+          type: string
+          description: Select the approved AWS account and EKS cluster for this workload
+          enum:
+            - consumer-dev
+            - courier-dev
+          enumNames:
+            - Consumer development (554479149941 / eks-consumer-dev)
+            - Courier development (713440373855 / eks-courier-dev)
+          default: consumer-dev
+          ui:widget: CourierDeploymentTarget
 
     - title: Runtime architecture
       required:
@@ -163,22 +177,24 @@ spec:
         awsAccountId:
           title: AWS Account ID
           type: string
-          default: "554479149941"
-          ui:readonly: true
+          ui:widget: DeploymentTargetValue
         awsRegion:
           title: AWS Region
           type: string
           default: "us-west-2"
-          ui:readonly: true
+          ui:widget: DeploymentTargetValue
         eksOidcProviderId:
           title: EKS OIDC Provider ID
           type: string
           pattern: "^[A-Z0-9]{32}$"
-          default: CFA3B3060A916F62CB2F522C84B48422
-          ui:readonly: true
+          ui:widget: DeploymentTargetValue
 
     - title: Kubernetes Configuration
       properties:
+        clusterName:
+          title: EKS Cluster Name
+          type: string
+          ui:widget: DeploymentTargetValue
         namespace:
           title: Kubernetes Namespace
           type: string
@@ -263,8 +279,7 @@ spec:
         gatewayName:
           title: Gateway Name
           type: string
-          default: "consumer-gateway-private"
-          ui:readonly: true
+          ui:widget: DeploymentTargetValue
         gatewayNamespace:
           title: Gateway Namespace
           type: string
