@@ -120,7 +120,7 @@ spec:
         owner:
           title: Owner
           type: string
-          description: Owning squad
+          description: Owner of the component
           ui:field: SquadOwnerPicker
           ui:options:
             catalogFilter:
