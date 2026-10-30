@@ -89,7 +89,7 @@ spec:
         tier:
           title: Service tier
           type: string
-          description: Select the service tier for this application.
+          description: What is the complexity level of your solution? Choose 1 for the lowest complexity and observability need, and 4 for the highest.
           enum: ['1', '2', '3', '4']
           default: '3'
 
@@ -365,8 +365,12 @@ spec:
           element: ${{ parameters.element }}
           team: ${{ parameters.team }}
           tier: ${{ parameters.tier }}
+          framework: node
           description: ${{ parameters.description }}
           appOrganization: ab-inbev-ze-company
+          deploymentTarget: ${{ parameters.deploymentTarget }}
+          goldenWorkflow: ${{ parameters.deploymentTarget == "courier-dev" and "eks_courier_node_pipeline" or "eks_node_pipeline" }}
+          gitopsValuesFile: ${{ parameters.deploymentTarget == "courier-dev" and "deploy/values-dev.yaml" or "values.yaml" }}
           awsAccountId: ${{ parameters.awsAccountId }}
           awsRegion: ${{ parameters.awsRegion }}
           eksOidcProviderId: ${{ parameters.eksOidcProviderId }}
@@ -376,6 +380,7 @@ spec:
           prodAwsAccountId: ${{ parameters.awsAccountId }}
           releaseBranch: "develop"
           prodBranch: "main"
+          clusterName: ${{ parameters.clusterName }}
           namespace: ${{ parameters.namespace or parameters.name }}
           replicaCount: ${{ parameters.replicaCount }}
           cpuRequests: ${{ parameters.cpuRequests }}
@@ -498,6 +503,7 @@ spec:
 
     - id: create-helm-charts
       name: Create Helm charts (workspace staging for GitOps commit)
+      if: ${{ parameters.deploymentTarget == 'consumer-dev' }}
       dependsOn: [publish-app]
       action: custom:create-helm-charts
       input:
@@ -545,6 +551,7 @@ spec:
 
     - id: publish-gitops-helm
       name: Open platform GitOps Helm pull request
+      if: ${{ parameters.deploymentTarget == 'consumer-dev' }}
       dependsOn: [create-helm-charts]
       action: custom:publish-github-pull-request-api
       input:
@@ -560,9 +567,41 @@ spec:
         sourcePath: ./helm-temp
         commitMessage: 'chore(gitops): add ${{ parameters.name }} Helm chart'
 
+    - id: fetch-courier-registration
+      name: Render Courier Argo registration
+      if: ${{ parameters.deploymentTarget == 'courier-dev' }}
+      action: fetch:template
+      input:
+        url: ./courier-registration
+        targetPath: ./courier-registration-temp
+        values:
+          name: ${{ parameters.name }}
+          namespace: ${{ parameters.namespace or parameters.name }}
+
+    - id: publish-courier-registration
+      name: Open Courier GitOps registration pull request
+      if: ${{ parameters.deploymentTarget == 'courier-dev' }}
+      dependsOn: [fetch-courier-registration]
+      action: custom:publish-github-pull-request-api
+      input:
+        repoUrl: github.com?owner=abi-training&repo=ze-courier-chart
+        branchName: feature/register-courier-${{ parameters.name }}
+        title: 'Register Courier workload ${{ parameters.name }}'
+        description: |
+          Automated Courier registration from the Backstage CQRS EKS template.
+
+          Values repository: https://github.com/abi-training/ms-${{ parameters.name }}-app
+          Values file: deploy/values-dev.yaml
+        targetBranchName: main
+        sourcePath: ./courier-registration-temp
+        commitMessage: 'chore(gitops): register Courier workload ${{ parameters.name }}'
+
     - id: debug-summary
       name: Summary
-      dependsOn: [publish-gitops-helm, register-entity-provider-catalog]
+      dependsOn:
+        - publish-gitops-helm
+        - publish-courier-registration
+        - register-entity-provider-catalog
       action: debug:log
       input:
         message: |
@@ -572,9 +611,9 @@ spec:
           Published: ${{ steps['publish-app'].output.remoteUrl }}
           Architecture: ${{ parameters.cqrsArchitecture }} (${{ parameters.cqrsArchitecture == 'cqrs' and ('projection: ' + parameters.cqrsProjectionMode) or ('messaging: ' + parameters.standardMessagingMode) }})
           Namespace: ${{ parameters.namespace or parameters.name }}
-          Platform GitOps repo: https://github.com/abi-training/ze-consumer-chart
-          Helm charts: https://github.com/abi-training/ze-consumer-chart/tree/main/applications/${{ parameters.name }}/dev
-          Argo CD application: https://argo.zedelivery.in/applications/eks-consumer-dev-${{ parameters.name }}
+          Deployment target: ${{ parameters.deploymentTarget }}
+          Courier values: deploy/values-dev.yaml (when Courier development is selected)
+          Argo CD application: https://argo.zedelivery.in/applications/eks-${{ parameters.deploymentTarget }}-${{ parameters.name }}
           Entity provider catalog: ${{ steps['register-entity-provider-catalog'].output.catalogRegistrationUrl }}
 
           Next: review infra/ for Crossplane claims; Argo CD will sync once the Golden Pipeline updates image tags.
@@ -594,12 +633,9 @@ spec:
       - title: Entity provider catalog (ze-idp-backstage-entity-provider)
         url: ${{ steps['register-entity-provider-catalog'].output.catalogRegistrationUrl }}
         icon: catalog
-      - title: Platform GitOps Helm pull request
-        url: ${{ steps['publish-gitops-helm'].output.remoteUrl }}
+      - title: Platform GitOps pull request
+        url: ${{ parameters.deploymentTarget == 'courier-dev' and steps['publish-courier-registration'].output.remoteUrl or steps['publish-gitops-helm'].output.remoteUrl }}
         icon: merge
-      - title: Platform GitOps charts (Helm)
-        url: https://github.com/abi-training/ze-consumer-chart/tree/main/applications/${{ parameters.name }}/dev
-        icon: storage
       - title: Argo CD application
         url: https://argo.zedelivery.in/applications/eks-consumer-dev-${{ parameters.name }}
         icon: dashboard
