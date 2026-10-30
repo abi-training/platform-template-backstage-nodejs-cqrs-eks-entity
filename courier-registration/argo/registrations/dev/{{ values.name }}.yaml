@@ -1,0 +1,9 @@
+app: "{{ values.name }}"
+cluster: eks-courier-dev
+tenant: courier
+valuesRepo: "https://github.com/abi-training/ms-{{ values.name }}-app"
+valuesRevision: develop
+valuesFile: deploy/values-dev.yaml
+chartPath: charts
+chartRepo: https://github.com/abi-training/ze-courier-chart
+chartRevision: main
