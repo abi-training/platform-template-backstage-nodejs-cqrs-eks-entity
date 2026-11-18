@@ -126,7 +126,6 @@ spec:
             catalogFilter:
               kind: Group
             sort: alphabetical
-            teamPathsOnly: true
 
         environments:
           title: Target deployment track
